@@ -1021,7 +1021,8 @@ def batch_executor(
     index_field: str = "index",
     error_field: str = "error",
     result_field: str = "result",
-    overwrite: bool = False
+    overwrite: bool = False,
+    mode: str = "auto"
 ):
     """向后兼容的自动执行函数"""
     config = ExecutorConfig(
@@ -1040,116 +1041,4 @@ def batch_executor(
         overwrite=overwrite
     )
     executor = Executor(func, config)
-    return executor.run(items)
-
-# async validator
-T = TypeVar('T')
-
-class ValidationError(Exception):
-    pass
-
-class AsyncValidator:
-    def __init__(
-        self,
-        verify_func: Callable[[T], Awaitable[bool]],
-        nproc: Optional[int] = None,
-        timeout: Optional[float] = None,
-        group_timeout: Optional[float] = None,
-        raise_on_timeout: bool = False,  # 超时是否抛出异常
-        show_progress: bool = True      # 是否显示进度条
-    ):
-        async def verify_async(item: T) -> bool:
-            try:
-                return await verify_func(item)
-            except Exception as e:
-                return False
-        self.verify_func = verify_async
-        self.nproc = nproc or 5
-        self.timeout = timeout
-        self.group_timeout = group_timeout
-        self.raise_on_timeout = raise_on_timeout
-        self.show_progress = show_progress
-        self.semaphore = asyncio.Semaphore(self.nproc)
-
-    @asynccontextmanager
-    async def _verify_with_sem(self):
-        async with self.semaphore:
-            yield
-
-    async def verify_group_async(self, items: List[T], pbar=None) -> bool:
-        if not items:
-            return False
-        
-        tasks = set()
-        try:
-            # 创建验证任务
-            for item in items:
-                async with self._verify_with_sem():
-                    task = asyncio.create_task(self.verify_func(item))
-                    tasks.add(task)
-
-            start_time = asyncio.get_event_loop().time()
-            items_processed = 0
-
-            while tasks:
-                if self.group_timeout:
-                    elapsed = asyncio.get_event_loop().time() - start_time
-                    if elapsed > self.group_timeout:
-                        if self.raise_on_timeout:
-                            raise asyncio.TimeoutError("Group validation timeout")
-                        return False
-
-                done, pending = await asyncio.wait(
-                    tasks,
-                    timeout=self.timeout,
-                    return_when=asyncio.FIRST_COMPLETED
-                )
-
-                if not done:
-                    if self.raise_on_timeout:
-                        raise asyncio.TimeoutError("Task timeout")
-                    return False
-
-                for task in done:
-                    items_processed += 1
-                    if pbar:
-                        pbar.update(1)
-                    try:
-                        if task.result() is True:
-                            for t in pending:
-                                t.cancel()
-                            return True
-                    except Exception as e:
-                        print(f"Validation error: {e}")
-
-                tasks = pending
-            return False
-
-        finally:
-            for task in tasks:
-                if not task.done():
-                    task.cancel()
-
-    async def verify_all_groups_async(self, groups: List[List[T]]) -> List[bool]:
-        results = [False] * len(groups)  # 预分配结果列表
-        total_items = sum(len(group) for group in groups)
-        items_pbar = tqdm(total=total_items, desc="Items", disable=not self.show_progress)
-        try:
-            async with asyncio.TaskGroup() as tg:
-                # 创建所有group的任务
-                tasks = [
-                    tg.create_task(self.verify_group_async(group, items_pbar)) 
-                    for i, group in enumerate(groups)
-                ]
-                # 等待所有任务完成
-                for i, task in enumerate(tasks):
-                    results[i] = await task
-            return results
-        finally:
-            items_pbar.close()
-    
-    def verify_group(self, items: List[T]) -> bool:
-        return asyncio.run(self.verify_group_async(items))
-    
-    def verify_all_groups(self, groups: List[List[T]]) -> List[bool]:
-        return asyncio.run(self.verify_all_groups_async(groups))
+    return executor.run(items, mode=mode)
