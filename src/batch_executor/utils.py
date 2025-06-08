@@ -1,7 +1,19 @@
 import os
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Union
+from batch_executor.constants import logger
 import json
+
+def rotate_file(file:Union[Path, str], max_size:int=500):
+    """rename existing file"""
+    file = Path(str(file))
+    if file.exists():
+        for i in range(max_size):
+            new_file = file.parent / f'{file.stem}_{i}{file.suffix}'
+            if not new_file.exists():
+                file.rename(new_file)
+                return new_file
+        logger.warning(f"Failed to rename file {file}")
 
 def get_files_with_ext(directory, ext: str = '.jsonl', exclude_patterns=None) -> List[Path]:
     """获取目录下的所有指定扩展名的文件"""

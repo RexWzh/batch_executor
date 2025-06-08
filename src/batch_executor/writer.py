@@ -18,7 +18,6 @@ class WriteFormat(Enum):
     CSV = "csv"
     TXT = "txt"
 
-
 class BatchWriter:
     """批量数据写入器"""
     
