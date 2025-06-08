@@ -3,9 +3,7 @@
 """Tests for `batch_executor` package."""
 
 import pytest
-
-
-from batch_executor import batch_executor
+from batch_executor import main
 
 
 @pytest.fixture
