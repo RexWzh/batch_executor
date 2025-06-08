@@ -7,7 +7,6 @@ from rich.console import Console
 app = typer.Typer()
 console = Console()
 
-
 @app.command()
 def main():
     """Console script for batch_executor."""

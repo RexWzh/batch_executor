@@ -1,6 +1,6 @@
 """
-writer.py 的 pytest 测试文件 - 简化版
-测试核心功能：基础写入、多格式支持、批量处理等
+writer.py 的 pytest 测试文件
+核心功能：基础写入、多格式支持、批量处理等
 """
 import pytest
 import json
@@ -208,8 +208,6 @@ class TestErrorHandling:
         result = writer.write({"test": "data"})
         writer.flush()
         writer.stop()
-        
-        # 程序应该正常运行，即使写入失败
 
 
 class TestConcurrency:
@@ -309,7 +307,6 @@ class TestPerformance:
 
 class TestUtilityFunctions:
     """工具函数测试"""
-    
     def test_write_data_sync(self, temp_dir, sample_data):
         """测试同步写入函数"""
         file_path = temp_dir / "sync_test.jsonl"

@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import List, Optional
 import json
 
-
 def get_files_with_ext(directory, ext: str = '.jsonl', exclude_patterns=None) -> List[Path]:
     """获取目录下的所有指定扩展名的文件"""
     if exclude_patterns is None:
@@ -18,7 +17,6 @@ def get_files_with_ext(directory, ext: str = '.jsonl', exclude_patterns=None) ->
                     full_path = Path(root, file).resolve()
                     target_files.append(full_path)
     return target_files
-
 
 def read_jsonl_files(file_paths: List[Path]) -> List[dict]:
     """读取多个JSONL文件并合并结果"""

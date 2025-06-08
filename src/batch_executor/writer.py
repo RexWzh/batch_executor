@@ -11,7 +11,6 @@ from typing import Any, List, Dict, Optional, Union
 from queue import Queue, Empty
 from enum import Enum
 
-
 class WriteFormat(Enum):
     """支持的写入格式"""
     JSON = "json"

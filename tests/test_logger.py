@@ -1,10 +1,7 @@
 import pytest
 import logging
 import os
-from pathlib import Path
 import tempfile
-import re
-
 from batch_executor import setup_logger  # 导入你的logger模块
 
 class TestLogger:

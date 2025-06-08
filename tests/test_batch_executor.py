@@ -5,7 +5,6 @@
 import pytest
 from batch_executor import main
 
-
 @pytest.fixture
 def response():
     """Sample pytest fixture.

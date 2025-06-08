@@ -13,8 +13,6 @@ async def async_verify(item):
     return item > 5
 
 # 使用类接口
-
-
 def test_validate_any():
     validator = Validator(sync_verify, nproc=4, timeout=1.0)
     # 验证单个组

@@ -32,8 +32,6 @@ _process_logger = setup_logger('multi_process', log_level="INFO")
 _async_logger = setup_logger('multi_async', log_level="INFO")
 _hybrid_logger = setup_logger('multi_hybrid', log_level="INFO")
 
-
-
 @dataclass
 class ExecutorConfig:
     """执行器配置类"""
