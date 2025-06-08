@@ -6,25 +6,24 @@
 - hybrid_run: 多进程+异步混合执行（适用于大规模IO密集型）
 - run: 自动选择执行模式
 """
-import concurrent.futures
-from concurrent.futures import ThreadPoolExecutor, as_completed, ProcessPoolExecutor
-from batch_executor.custom_logger import setup_logger
-from typing import List, Callable, Any, Coroutine, Optional
 import logging
 import asyncio
+import math
+import signal
+import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor, as_completed, ProcessPoolExecutor
+from typing import List, Callable, Any, Coroutine, Optional
 from tqdm.asyncio import tqdm
 from tqdm import tqdm as sync_tqdm
 from typing import TypeVar, List, Callable, Any, Optional, Awaitable, Union
-from contextlib import asynccontextmanager
-import signal
 from func_timeout import func_timeout, FunctionTimedOut
-import math
-import multiprocessing as mp
 from multiprocessing import Manager
 from pathlib import Path
 from dataclasses import dataclass
 from batch_executor.writer import BatchWriter, WriteFormat
 from batch_executor.utils import read_jsonl_files
+from batch_executor.custom_logger import setup_logger
+from batch_executor.constants import PHYSICAL_CORES, VIRTUAL_CORES
 
 # 默认日志记录器
 _thread_logger = setup_logger('multi_thread', log_level="INFO")
@@ -36,7 +35,7 @@ _hybrid_logger = setup_logger('multi_hybrid', log_level="INFO")
 class ExecutorConfig:
     """执行器配置类"""
     # 基础执行配置
-    nproc: int = 5
+    nproc: int = None
     ncoroutine: Optional[int] = None
     timeout: Optional[Union[int, float]] = None
     keep_order: bool = True
@@ -57,6 +56,9 @@ class ExecutorConfig:
     
     def __post_init__(self):
         """后处理初始化"""
+        if self.nproc is None:
+            # 默认使用物理核心数
+            self.nproc = PHYSICAL_CORES
         if self.ncoroutine is None:
             self.ncoroutine = self.nproc
     
@@ -864,7 +866,7 @@ class Executor:
 def batch_async_executor(
     items: List[Any],
     func_async: Callable[[Any], Coroutine],
-    nproc: int = 5,
+    nproc: Optional[int] = None,
     task_desc: str = "",
     logger: Optional[logging.Logger] = _async_logger,
     keep_order: bool = True,
@@ -900,7 +902,7 @@ def batch_async_executor(
 def batch_thread_executor(
     items: List[Any],
     func: Callable[[Any], Any],
-    nproc: int = 5,
+    nproc: Optional[int] = None,
     task_desc: str = "",
     logger: Optional[logging.Logger] = _thread_logger,
     keep_order: bool = True,
@@ -936,7 +938,7 @@ def batch_thread_executor(
 def batch_process_executor(
     items: List[Any],
     func: Callable[[Any], Any],
-    nproc: int = 5,
+    nproc: Optional[int] = None,
     task_desc: str = "",
     logger: Optional[logging.Logger] = _process_logger,
     keep_order: bool = True,
@@ -973,7 +975,7 @@ def batch_hybrid_executor(
     items: List[Any],
     func_async: Callable[[Any], Coroutine],
     nproc: int = 4,
-    ncoroutine: int = 10,
+    ncoroutine: Optional[int] = VIRTUAL_CORES,
     task_desc: str = "",
     logger: Optional[logging.Logger] = _hybrid_logger,
     keep_order: bool = True,
@@ -1010,7 +1012,8 @@ def batch_hybrid_executor(
 def batch_executor(
     items: List[Any],
     func: Callable[[Any], Any],
-    nproc: int = 5,
+    nproc: Optional[int] = None,
+    ncoroutine: Optional[int] = VIRTUAL_CORES,
     task_desc: str = "",
     logger: Optional[logging.Logger] = _thread_logger,
     keep_order: bool = True,
@@ -1027,6 +1030,7 @@ def batch_executor(
     """向后兼容的自动执行函数"""
     config = ExecutorConfig(
         nproc=nproc,
+        ncoroutine=ncoroutine,
         task_desc=task_desc,
         logger=logger,
         disable_logger=logger is None,

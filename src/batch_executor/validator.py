@@ -5,12 +5,11 @@ from contextlib import asynccontextmanager
 from tqdm.asyncio import tqdm
 from tqdm import tqdm as sync_tqdm
 from concurrent.futures import ProcessPoolExecutor, as_completed
-import multiprocessing as mp
 import time
 import signal
+from batch_executor.constants import PHYSICAL_CORES, VIRTUAL_CORES
 
 T = TypeVar('T')
-
 def _process_timeout_handler(signum, frame):
     """信号处理函数，用于多进程超时"""
     raise TimeoutError("Process validation timeout")
@@ -37,50 +36,6 @@ def _process_verify_wrapper(args):
     finally:
         if timeout:
             signal.alarm(0)  # 确保取消超时
-
-def _process_group_validation(args):
-    """多进程组验证函数"""
-    items, verify_func, timeout, group_timeout = args
-    
-    if not items:
-        return False
-    
-    start_time = time.time()
-    
-    with ProcessPoolExecutor(max_workers=min(len(items), mp.cpu_count())) as executor:
-        # 提交所有验证任务
-        future_to_item = {
-            executor.submit(_process_verify_wrapper, (item, verify_func, timeout)): item
-            for item in items
-        }
-        
-        try:
-            for future in as_completed(future_to_item):
-                # 检查组超时
-                if group_timeout:
-                    elapsed = time.time() - start_time
-                    if elapsed > group_timeout:
-                        # 取消剩余任务
-                        for f in future_to_item:
-                            if not f.done():
-                                f.cancel()
-                        return False
-                
-                try:
-                    result = future.result()
-                    if result:
-                        # 找到有效项，取消剩余任务
-                        for f in future_to_item:
-                            if not f.done():
-                                f.cancel()
-                        return True
-                except Exception:
-                    continue
-            
-            return False
-        except Exception:
-            return False
-
 class Validator:
     """
     Validator that checks multiple items in parallel with concurrency control.
@@ -106,7 +61,7 @@ class Validator:
             show_progress: Whether to show progress bar
         """
         self.verify_func = verify_func
-        self.nproc = nproc or 5
+        self.nproc = nproc or PHYSICAL_CORES
         self.timeout = timeout
         self.group_timeout = group_timeout
         self.show_progress = show_progress
@@ -369,7 +324,7 @@ class Validator:
 def validate_any(
     items: List[T], 
     verify_func: Union[Callable[[T], Awaitable[bool]], Callable[[T], bool]],
-    nproc: int = 5,
+    nproc: Optional[int] = None,
     timeout: Optional[float] = None,
     group_timeout: Optional[float] = None,
     show_progress: bool = True
@@ -394,7 +349,7 @@ def validate_any(
 def validate_groups(
     groups: List[List[T]], 
     verify_func: Union[Callable[[T], Awaitable[bool]], Callable[[T], bool]],
-    nproc: int = 5,
+    nproc: Optional[int] = None,
     timeout: Optional[float] = None,
     group_timeout: Optional[float] = None,
     show_progress: bool = True,
