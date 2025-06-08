@@ -2,9 +2,9 @@
 
 __author__ = """Rex Wang"""
 __email__ = '1073853456@qq.com'
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
-from .logger_config import setup_logger
+from .custom_logger import setup_logger
 from .main import (
     Executor, batch_executor,
     batch_async_executor, batch_hybrid_executor,

@@ -8,7 +8,7 @@
 """
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor, as_completed, ProcessPoolExecutor
-from batch_executor.logger_config import setup_logger
+from batch_executor.custom_logger import setup_logger
 from typing import List, Callable, Any, Coroutine, Optional
 import logging
 import asyncio
