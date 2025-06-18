@@ -54,6 +54,6 @@ async def capture_all_requests(request: Request, path: str = ""):
     
     return {
         "status": "success",
-        "message": "请求已记录",
+        "message": "请求已收到",
         "request_info": request_info
     }
