@@ -17,6 +17,7 @@ dependencies = [
     "func_timeout",
     "psutil",
     "colorama",
+    "httpx"
 ]
 
 [project.optional-dependencies]

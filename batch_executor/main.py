@@ -849,7 +849,7 @@ class Executor:
             if asyncio.iscoroutinefunction(self.func):
                 return asyncio.run(self.async_run(items))
             else:
-                return self.process_run(items)
+                return self.thread_run(items)
         elif mode == "async":
             return asyncio.run(self.async_run(items))
         elif mode == "thread":
