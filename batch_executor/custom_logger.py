@@ -9,7 +9,6 @@ colorama.init()
 
 class ColoredFormatter(logging.Formatter):
     """Custom formatter adding colors to log levels"""
-    git
     COLORS = {
         'DEBUG': Fore.BLUE,
         'INFO': Fore.GREEN,
