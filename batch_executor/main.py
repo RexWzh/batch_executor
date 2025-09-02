@@ -10,6 +10,7 @@ import logging
 import asyncio
 import math
 import signal
+import threading
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor, as_completed, ProcessPoolExecutor
 from typing import List, Callable, Any, Coroutine, Optional
@@ -27,7 +28,7 @@ from batch_executor.constants import PHYSICAL_CORES, VIRTUAL_CORES, PLATFORM
 
 if PLATFORM != "Linux":
     try:
-        mp.set_start_method('fork')
+        mp.set_start_method('fork', force=True)
     except RuntimeError:
         pass
 
@@ -724,7 +725,7 @@ class BatchExecutor:
         pbar.update(completed_items)  # 更新已缓存的进度
         
         # 启动进度监控线程
-        import threading
+        
         progress_stop_event = threading.Event()
         
         def progress_monitor():
