@@ -1,5 +1,8 @@
 import psutil
 from batch_executor.custom_logger import setup_logger
+import platform
+
+PLATFORM = platform.system()
 
 logger = setup_logger(
     name="batch_executor",
