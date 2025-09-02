@@ -434,9 +434,9 @@ class BatchExecutor:
             
         return final_results
     
-    def _chunk_items(self, items: List[Any], nproc: int) -> List[List[Any]]:
+    def _chunk_items(self, items: List[Any], nworker: int) -> List[List[Any]]:
         """将项目列表分块"""
-        chunk_size = math.ceil(len(items) / nproc)
+        chunk_size = math.ceil(len(items) / nworker)
         chunks = []
         for i in range(0, len(items), chunk_size):
             chunks.append(items[i:i + chunk_size])
@@ -888,7 +888,7 @@ def batch_async_executor(
 ) -> List[Any]:
     """向后兼容的异步执行函数"""
     config = BatchConfig(
-        nproc=nworker or nproc,
+        nworker=nworker or nproc,
         task_desc=task_desc,
         logger=logger,
         disable_logger=logger is None,
@@ -925,7 +925,7 @@ def batch_thread_executor(
 ) -> List[Any]:
     """向后兼容的线程执行函数"""
     config = BatchConfig(
-        nproc=nworker or nproc,
+        nworker=nworker or nproc,
         task_desc=task_desc,
         logger=logger,
         disable_logger=logger is None,
@@ -958,11 +958,12 @@ def batch_process_executor(
     error_field: str = "error",
     result_field: str = "result",
     overwrite: bool = False,
+    # deprecated
     nproc: Optional[int] = None
 ) -> List[Any]:
     """向后兼容的进程执行函数"""
     config = BatchConfig(
-        nproc=nworker or nproc,
+        nworker=nworker or nproc,
         task_desc=task_desc,
         logger=logger,
         disable_logger=logger is None,
@@ -1002,8 +1003,8 @@ def batch_hybrid_executor(
 ) -> List[Any]:
     """混合执行器函数接口：多进程 + 异步"""
     config = BatchConfig(
-        nproc=pool_size or nproc,
-        ncoroutine=nworker or ncoroutine,
+        pool_size=pool_size or nproc,
+        nworker=nworker or ncoroutine,
         task_desc=task_desc,
         logger=logger,
         disable_logger=logger is None,
@@ -1023,8 +1024,8 @@ def batch_hybrid_executor(
 def batch_executor(
     items: List[Any],
     func: Callable[[Any], Any],
-    nproc: Optional[int] = None,
-    ncoroutine: Optional[int] = VIRTUAL_CORES,
+    pool_size: int = 2,
+    nworker: Optional[int] = None,
     task_desc: str = "",
     logger: Optional[logging.Logger] = _thread_logger,
     keep_order: bool = True,
@@ -1036,12 +1037,14 @@ def batch_executor(
     error_field: str = "error",
     result_field: str = "result",
     overwrite: bool = False,
-    mode: str = "auto"
+    mode: str = "auto",
+    # Deprecated
+    nproc: Optional[int] = None
 ):
     """向后兼容的自动执行函数"""
     config = BatchConfig(
-        nproc=nproc,
-        ncoroutine=ncoroutine,
+        nworker=nworker or nproc,
+        pool_size=pool_size,
         task_desc=task_desc,
         logger=logger,
         disable_logger=logger is None,

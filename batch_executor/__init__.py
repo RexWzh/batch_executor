@@ -6,7 +6,7 @@ __version__ = '0.2.4'
 
 from .custom_logger import setup_logger
 from .main import (
-    Executor, batch_executor,
+    BatchExecutor, batch_executor,
     batch_async_executor, batch_hybrid_executor,
     batch_process_executor, batch_thread_executor
 )
