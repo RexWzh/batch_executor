@@ -641,7 +641,7 @@ class BatchExecutor:
             pbar = sync_tqdm(total=total_items, desc=desc, ncols=80, dynamic_ncols=True)
             pbar.update(completed_items)  # 更新已缓存的进度
             
-            with ProcessPoolExecutor(max_workers=self.config.pool_size) as executor:
+            with ProcessPoolExecutor(max_workers=self.config.nworker) as executor:
                 # 准备参数，包含超时时间
                 process_args = [(item, idx, self.func, self.config.timeout) for idx, item in filtered_items]
                 
@@ -744,7 +744,7 @@ class BatchExecutor:
         progress_thread.start()
         
         try:
-            with ProcessPoolExecutor(max_workers=self.config.nworker) as executor:
+            with ProcessPoolExecutor(max_workers=self.config.pool_size) as executor:
                 # 准备每个进程的参数
                 process_args = []
                 start_idx = 0
