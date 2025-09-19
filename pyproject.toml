@@ -4,7 +4,6 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "batch_executor"
-version = "0.2.5"
 description = "A high-performance batch executor supporting async, threading, multiprocessing, and hybrid execution modes with progress bars and logging."
 readme = "README.rst"
 authors = [{name = "Rex Wang", email = "1073853456@qq.com"}]
@@ -19,6 +18,7 @@ dependencies = [
     "colorama",
     "httpx"
 ]
+dynamic = ["version"]
 
 [project.optional-dependencies]
 dev = [
@@ -34,6 +34,9 @@ dev = [
 
 [tool.setuptools]
 package-dir = {"" = "."}
+
+[tool.setuptools.dynamic]
+version = {attr = "batch_executor.__version__"}
 
 [tool.setuptools.package-data]
 "*" = ["*.*"]
