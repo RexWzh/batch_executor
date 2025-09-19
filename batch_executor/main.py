@@ -10,7 +10,6 @@ import logging
 import asyncio
 import math
 import signal
-import threading
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor, as_completed, ProcessPoolExecutor
 from typing import List, Callable, Any, Coroutine, Optional
@@ -18,19 +17,13 @@ from tqdm.asyncio import tqdm
 from tqdm import tqdm as sync_tqdm
 from typing import TypeVar, List, Callable, Any, Optional, Awaitable, Union
 from func_timeout import func_timeout, FunctionTimedOut
-import multiprocessing as mp
+from multiprocessing import Manager
 from pathlib import Path
 from dataclasses import dataclass
 from batch_executor.writer import BatchWriter, WriteFormat
 from batch_executor.utils import read_jsonl_files
 from batch_executor.custom_logger import setup_logger
-from batch_executor.constants import PHYSICAL_CORES, VIRTUAL_CORES, PLATFORM
-
-if PLATFORM != "Linux":
-    try:
-        mp.set_start_method('fork', force=True)
-    except RuntimeError:
-        pass
+from batch_executor.constants import PHYSICAL_CORES, VIRTUAL_CORES
 
 # 默认日志记录器
 _thread_logger = setup_logger('multi_thread', log_level="INFO")
@@ -39,15 +32,11 @@ _async_logger = setup_logger('multi_async', log_level="INFO")
 _hybrid_logger = setup_logger('multi_hybrid', log_level="INFO")
 
 @dataclass
-class BatchConfig:
+class ExecutorConfig:
     """执行器配置类"""
     # 基础执行配置
-    nworker: Optional[int] = None
-    """执行的并发数量，默认使用物理核心数"""
-
-    pool_size: int = 2
-    """异步混合执行时的进程池大小，默认为 2"""
-
+    nproc: int = None
+    ncoroutine: Optional[int] = None
     timeout: Optional[Union[int, float]] = None
     keep_order: bool = True
     task_desc: str = ""
@@ -67,8 +56,11 @@ class BatchConfig:
     
     def __post_init__(self):
         """后处理初始化"""
-        if self.nworker is None:
-            self.nworker = PHYSICAL_CORES
+        if self.nproc is None:
+            # 默认使用物理核心数
+            self.nproc = PHYSICAL_CORES
+        if self.ncoroutine is None:
+            self.ncoroutine = self.nproc
     
     def get_cache_path(self, index: Optional[int] = None) -> Optional[Path]:
         """获取完整的缓存文件路径"""
@@ -106,6 +98,7 @@ class BatchConfig:
                 cache_paths.append(cache_path)
         return cache_paths
 
+
 def _timeout_handler(signum, frame):
     """信号处理函数，用于多进程超时"""
     raise TimeoutError("Process execution timeout")
@@ -134,11 +127,11 @@ def _process_wrapper(args):
 
 def _hybrid_worker_with_progress(args):
     """混合执行器的进程工作函数，支持实时进度更新和缓存"""
-    items_chunk, func_async, nworker, timeout, start_idx, progress_queue, cache_config = args
+    items_chunk, func_async, ncoroutine, timeout, start_idx, progress_queue, cache_config = args
     
     async def async_worker_in_process():
         """在进程内部运行异步任务"""
-        sem = asyncio.Semaphore(nworker)
+        sem = asyncio.Semaphore(ncoroutine)
         
         # 创建进程内的缓存写入器
         process_cache_writer = None
@@ -224,10 +217,10 @@ def _hybrid_worker_with_progress(args):
             progress_queue.put(1)
         return [(start_idx + i, None, str(e)) for i in range(len(items_chunk))]
 
-class BatchExecutor:
+class Executor:
     """批量任务执行器类"""
     
-    def __init__(self, func: Callable[[Any], Any], config: Optional[BatchConfig] = None, **kwargs):
+    def __init__(self, func: Callable[[Any], Any], config: Optional[ExecutorConfig] = None, **kwargs):
         """
         初始化执行器
         
@@ -240,7 +233,7 @@ class BatchExecutor:
         
         # 如果没有提供config，创建默认配置
         if config is None:
-            config = BatchConfig()
+            config = ExecutorConfig()
         
         # 使用kwargs更新配置
         for key, value in kwargs.items():
@@ -435,9 +428,9 @@ class BatchExecutor:
             
         return final_results
     
-    def _chunk_items(self, items: List[Any], nworker: int) -> List[List[Any]]:
+    def _chunk_items(self, items: List[Any], nproc: int) -> List[List[Any]]:
         """将项目列表分块"""
-        chunk_size = math.ceil(len(items) / nworker)
+        chunk_size = math.ceil(len(items) / nproc)
         chunks = []
         for i in range(0, len(items), chunk_size):
             chunks.append(items[i:i + chunk_size])
@@ -461,7 +454,7 @@ class BatchExecutor:
                 logger = None
             else:
                 logger = self.config.logger or self._get_default_logger("async")
-            sem = asyncio.Semaphore(self.config.nworker)
+            sem = asyncio.Semaphore(self.config.nproc)
             
             # 定义任务函数 -> idx, result, error
             async def wrapped_func(item_with_idx):
@@ -577,7 +570,7 @@ class BatchExecutor:
             pbar = sync_tqdm(total=total_items, desc=desc, ncols=80, dynamic_ncols=True)
             pbar.update(completed_items)  # 更新已缓存的进度
             
-            with ThreadPoolExecutor(max_workers=self.config.nworker) as executor:
+            with ThreadPoolExecutor(max_workers=self.config.nproc) as executor:
                 # 提交所有任务
                 future_to_idx = {
                     executor.submit(wrapped_func, item_with_idx): item_with_idx[0]
@@ -641,7 +634,7 @@ class BatchExecutor:
             pbar = sync_tqdm(total=total_items, desc=desc, ncols=80, dynamic_ncols=True)
             pbar.update(completed_items)  # 更新已缓存的进度
             
-            with ProcessPoolExecutor(max_workers=self.config.nworker) as executor:
+            with ProcessPoolExecutor(max_workers=self.config.nproc) as executor:
                 # 准备参数，包含超时时间
                 process_args = [(item, idx, self.func, self.config.timeout) for idx, item in filtered_items]
                 
@@ -708,11 +701,11 @@ class BatchExecutor:
             logger = self.config.logger or self._get_default_logger("hybrid")
         
         # 创建进度队列
-        manager = mp.Manager()
+        manager = Manager()
         progress_queue = manager.Queue()
         
         # 将任务分块分配给不同进程
-        chunks = self._chunk_items([item for _, item in filtered_items], self.config.nworker)
+        chunks = self._chunk_items([item for _, item in filtered_items], self.config.nproc)
         
         results_with_idx = []
         failures = []
@@ -725,7 +718,7 @@ class BatchExecutor:
         pbar.update(completed_items)  # 更新已缓存的进度
         
         # 启动进度监控线程
-        
+        import threading
         progress_stop_event = threading.Event()
         
         def progress_monitor():
@@ -744,7 +737,7 @@ class BatchExecutor:
         progress_thread.start()
         
         try:
-            with ProcessPoolExecutor(max_workers=self.config.pool_size) as executor:
+            with ProcessPoolExecutor(max_workers=self.config.nproc) as executor:
                 # 准备每个进程的参数
                 process_args = []
                 start_idx = 0
@@ -771,7 +764,7 @@ class BatchExecutor:
                         process_args.append((
                             chunk, 
                             self.func, 
-                            self.config.nworker, 
+                            self.config.ncoroutine, 
                             self.config.timeout, 
                             chunk_start_idx,  # 在filtered_items中的起始索引
                             progress_queue,
@@ -868,11 +861,12 @@ class BatchExecutor:
         else:
             raise ValueError(f"Unsupported mode: {mode}. Choose from 'auto', 'async', 'thread', 'process', 'hybrid'")
 
+
 # 保持向后兼容的函数接口
 def batch_async_executor(
     items: List[Any],
     func_async: Callable[[Any], Coroutine],
-    nworker: Optional[int] = None,
+    nproc: Optional[int] = None,
     task_desc: str = "",
     logger: Optional[logging.Logger] = _async_logger,
     keep_order: bool = True,
@@ -883,13 +877,11 @@ def batch_async_executor(
     index_field: str = "index",
     error_field: str = "error",
     result_field: str = "result",
-    overwrite: bool = False,
-    # deprecated
-    nproc: Optional[int] = None
+    overwrite: bool = False
 ) -> List[Any]:
     """向后兼容的异步执行函数"""
-    config = BatchConfig(
-        nworker=nworker or nproc,
+    config = ExecutorConfig(
+        nproc=nproc,
         task_desc=task_desc,
         logger=logger,
         disable_logger=logger is None,
@@ -903,14 +895,14 @@ def batch_async_executor(
         result_field=result_field,
         overwrite=overwrite
     )
-    executor = BatchExecutor(func_async, config)
+    executor = Executor(func_async, config)
     return asyncio.run(executor.async_run(items))
 
 
 def batch_thread_executor(
     items: List[Any],
     func: Callable[[Any], Any],
-    nworker: Optional[int] = None,
+    nproc: Optional[int] = None,
     task_desc: str = "",
     logger: Optional[logging.Logger] = _thread_logger,
     keep_order: bool = True,
@@ -921,12 +913,11 @@ def batch_thread_executor(
     index_field: str = "index",
     error_field: str = "error",
     result_field: str = "result",
-    overwrite: bool = False,
-    nproc: Optional[int] = None
+    overwrite: bool = False
 ) -> List[Any]:
     """向后兼容的线程执行函数"""
-    config = BatchConfig(
-        nworker=nworker or nproc,
+    config = ExecutorConfig(
+        nproc=nproc,
         task_desc=task_desc,
         logger=logger,
         disable_logger=logger is None,
@@ -940,14 +931,14 @@ def batch_thread_executor(
         result_field=result_field,
         overwrite=overwrite
     )
-    executor = BatchExecutor(func, config)
+    executor = Executor(func, config)
     return executor.thread_run(items)
 
 
 def batch_process_executor(
     items: List[Any],
     func: Callable[[Any], Any],
-    nworker: Optional[int] = None,
+    nproc: Optional[int] = None,
     task_desc: str = "",
     logger: Optional[logging.Logger] = _process_logger,
     keep_order: bool = True,
@@ -958,13 +949,11 @@ def batch_process_executor(
     index_field: str = "index",
     error_field: str = "error",
     result_field: str = "result",
-    overwrite: bool = False,
-    # deprecated
-    nproc: Optional[int] = None
+    overwrite: bool = False
 ) -> List[Any]:
     """向后兼容的进程执行函数"""
-    config = BatchConfig(
-        nworker=nworker or nproc,
+    config = ExecutorConfig(
+        nproc=nproc,
         task_desc=task_desc,
         logger=logger,
         disable_logger=logger is None,
@@ -978,15 +967,15 @@ def batch_process_executor(
         result_field=result_field,
         overwrite=overwrite
     )
-    executor = BatchExecutor(func, config)
+    executor = Executor(func, config)
     return executor.process_run(items)
 
 
 def batch_hybrid_executor(
     items: List[Any],
     func_async: Callable[[Any], Coroutine],
-    pool_size: int = 2,
-    nworker: Optional[int] = None,
+    nproc: int = 4,
+    ncoroutine: Optional[int] = VIRTUAL_CORES,
     task_desc: str = "",
     logger: Optional[logging.Logger] = _hybrid_logger,
     keep_order: bool = True,
@@ -997,15 +986,12 @@ def batch_hybrid_executor(
     index_field: str = "index",
     error_field: str = "error",
     result_field: str = "result",
-    overwrite: bool = False,
-    # deprecated
-    nproc: int = 4,
-    ncoroutine: Optional[int] = VIRTUAL_CORES
+    overwrite: bool = False
 ) -> List[Any]:
     """混合执行器函数接口：多进程 + 异步"""
-    config = BatchConfig(
-        pool_size=pool_size or nproc,
-        nworker=nworker or ncoroutine,
+    config = ExecutorConfig(
+        nproc=nproc,
+        ncoroutine=ncoroutine,
         task_desc=task_desc,
         logger=logger,
         disable_logger=logger is None,
@@ -1019,14 +1005,15 @@ def batch_hybrid_executor(
         result_field=result_field,
         overwrite=overwrite
     )
-    executor = BatchExecutor(func_async, config)
+    executor = Executor(func_async, config)
     return executor.hybrid_run(items)
+
 
 def batch_executor(
     items: List[Any],
     func: Callable[[Any], Any],
-    pool_size: int = 2,
-    nworker: Optional[int] = None,
+    nproc: Optional[int] = None,
+    ncoroutine: Optional[int] = VIRTUAL_CORES,
     task_desc: str = "",
     logger: Optional[logging.Logger] = _thread_logger,
     keep_order: bool = True,
@@ -1038,14 +1025,12 @@ def batch_executor(
     error_field: str = "error",
     result_field: str = "result",
     overwrite: bool = False,
-    mode: str = "auto",
-    # Deprecated
-    nproc: Optional[int] = None
+    mode: str = "auto"
 ):
     """向后兼容的自动执行函数"""
-    config = BatchConfig(
-        nworker=nworker or nproc,
-        pool_size=pool_size,
+    config = ExecutorConfig(
+        nproc=nproc,
+        ncoroutine=ncoroutine,
         task_desc=task_desc,
         logger=logger,
         disable_logger=logger is None,
@@ -1059,5 +1044,5 @@ def batch_executor(
         result_field=result_field,
         overwrite=overwrite
     )
-    executor = BatchExecutor(func, config)
+    executor = Executor(func, config)
     return executor.run(items, mode=mode)
