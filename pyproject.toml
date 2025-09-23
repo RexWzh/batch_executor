@@ -33,12 +33,17 @@ dev = [
 ]
 
 [tool.setuptools]
-package-dir = {"" = "."}
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+exclude = ["tests*"]
+
+# 如果没有数据文件，可以删除这个配置
+# [tool.setuptools.package-data]
+# "*" = ["*.*"]
 
 [tool.setuptools.dynamic]
 version = {attr = "batch_executor.__version__"}
-
-[tool.setuptools.package-data]
-"*" = ["*.*"]
 
 
