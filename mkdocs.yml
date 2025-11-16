@@ -1,7 +1,7 @@
 site_name: batch_executor Documentation
 site_description: Python package for batch executor
 site_author: Rex Wang
-site_url: https://www.lookeng.cn/batch_executor/
+site_url: https://rexwzh.github.io/batch_executor/
 
 repo_name: RexWzh/batch_executor
 repo_url: https://github.com/RexWzh/batch_executor
