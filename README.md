@@ -1,8 +1,8 @@
 # batch_executor
 
 [![PyPI version](https://img.shields.io/pypi/v/batch_executor.svg)](https://pypi.python.org/pypi/batch_executor)
-[![Travis CI](https://img.shields.io/travis/RexWzh/batch_executor.svg)](https://travis-ci.com/RexWzh/batch_executor)
-[![Documentation Status](https://img.shields.io/badge/docs-mkdocs-blue)](https://RexWzh.github.io/batch_executor/)
+[![GitHub CI](https://github.com/RexWzh/batch_executor/workflows/Test%20Python%20Package/badge.svg)](https://github.com/RexWzh/batch_executor/actions)
+[![Documentation Status](https://img.shields.io/badge/docs-mkdocs-blue)](https://rexwzh.github.io/batch_executor/)
 
 A high-performance batch executor supporting async, threading, multiprocessing, and hybrid execution modes with progress bars and logging.
 
