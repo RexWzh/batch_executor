@@ -1,45 +1,45 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
     <url>
-        <loc>https://www.lookeng.cn/batch_executor/</loc>
+        <loc>https://rexwzh.github.io/batch_executor/</loc>
         <lastmod>2025-11-16</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="en" href="https://www.lookeng.cn/batch_executor/"/>
-        <xhtml:link rel="alternate" hreflang="zh" href="https://www.lookeng.cn/batch_executor/zh/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://rexwzh.github.io/batch_executor/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://rexwzh.github.io/batch_executor/zh/"/>
     </url>
     <url>
-        <loc>https://www.lookeng.cn/batch_executor/api/</loc>
+        <loc>https://rexwzh.github.io/batch_executor/api/</loc>
         <lastmod>2025-11-16</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="en" href="https://www.lookeng.cn/batch_executor/api/"/>
-        <xhtml:link rel="alternate" hreflang="zh" href="https://www.lookeng.cn/batch_executor/zh/api/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://rexwzh.github.io/batch_executor/api/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://rexwzh.github.io/batch_executor/zh/api/"/>
     </url>
     <url>
-        <loc>https://www.lookeng.cn/batch_executor/quickstart/</loc>
+        <loc>https://rexwzh.github.io/batch_executor/quickstart/</loc>
         <lastmod>2025-11-16</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="en" href="https://www.lookeng.cn/batch_executor/quickstart/"/>
-        <xhtml:link rel="alternate" hreflang="zh" href="https://www.lookeng.cn/batch_executor/zh/quickstart/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://rexwzh.github.io/batch_executor/quickstart/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://rexwzh.github.io/batch_executor/zh/quickstart/"/>
     </url>
     <url>
-        <loc>https://www.lookeng.cn/batch_executor/zh/</loc>
+        <loc>https://rexwzh.github.io/batch_executor/zh/</loc>
         <lastmod>2025-11-16</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="zh" href="https://www.lookeng.cn/batch_executor/zh/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="https://www.lookeng.cn/batch_executor/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://rexwzh.github.io/batch_executor/zh/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://rexwzh.github.io/batch_executor/"/>
     </url>
     <url>
-        <loc>https://www.lookeng.cn/batch_executor/zh/api/</loc>
+        <loc>https://rexwzh.github.io/batch_executor/zh/api/</loc>
         <lastmod>2025-11-16</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="zh" href="https://www.lookeng.cn/batch_executor/zh/api/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="https://www.lookeng.cn/batch_executor/api/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://rexwzh.github.io/batch_executor/zh/api/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://rexwzh.github.io/batch_executor/api/"/>
     </url>
     <url>
-        <loc>https://www.lookeng.cn/batch_executor/zh/quickstart/</loc>
+        <loc>https://rexwzh.github.io/batch_executor/zh/quickstart/</loc>
         <lastmod>2025-11-16</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="zh" href="https://www.lookeng.cn/batch_executor/zh/quickstart/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="https://www.lookeng.cn/batch_executor/quickstart/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://rexwzh.github.io/batch_executor/zh/quickstart/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://rexwzh.github.io/batch_executor/quickstart/"/>
     </url>
 </urlset>
